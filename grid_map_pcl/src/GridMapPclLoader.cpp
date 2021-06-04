@@ -15,12 +15,56 @@
 #include <pcl/common/io.h>
 #include <ros/console.h>
 
+#include <grid_map_core/GridMap.hpp>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+
 #include <grid_map_core/GridMapMath.hpp>
 
 #include "grid_map_pcl/GridMapPclLoader.hpp"
+
 #include "grid_map_pcl/helpers.hpp"
 
+
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_types.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/conversions.h>
+#include <pcl_ros/transforms.h>
+
 namespace grid_map {
+
+GridMapPclLoader::GridMapPclLoader(ros::NodeHandle* nh)
+{
+  ros::NodeHandle* nh_;
+  nh_ = nh;
+
+  cloudSub_ = nh->subscribe<sensor_msgs::PointCloud2>("/H01/horiz/os_cloud_node/points", 1, &GridMapPclLoader::cloud_cb, this);
+  gridMapPub_ = nh_->advertise<grid_map_msgs::GridMap>("grid_map_from_raw_pointcloud", 1, true);
+
+}
+
+void GridMapPclLoader::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
+{
+
+  pcl::PCLPointCloud2 pcl_pc2;
+  pcl_conversions::toPCL(*cloud_msg,pcl_pc2);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
+
+  setInputCloud(temp_cloud);
+  // const auto start = std::chrono::high_resolution_clock::now();
+  initializeGridMapGeometryFromInputCloud();
+  // printTimeElapsedToRosInfoStream(start, "Initialization took: ");
+  addLayerFromInputCloud("elevation");
+  // printTimeElapsedToRosInfoStream(start, "Total time: ");
+
+  grid_map::GridMap gridMap = getGridMap();
+  gridMap.setFrameId("world");
+
+  grid_map_msgs::GridMap msg;
+  grid_map::GridMapRosConverter::toMessage(gridMap, msg);
+  gridMapPub_.publish(msg);
+}
 
 const grid_map::GridMap& GridMapPclLoader::getGridMap() const {
   return workingGridMap_;

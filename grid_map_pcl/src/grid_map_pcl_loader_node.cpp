@@ -18,29 +18,29 @@ namespace gm = ::grid_map::grid_map_pcl;
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "grid_map_pcl_loader_node");
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh(ros::this_node::getName());
   gm::setVerbosityLevelToDebugIfFlagSet(nh);
 
-  ros::Publisher gridMapPub;
-  gridMapPub = nh.advertise<grid_map_msgs::GridMap>("grid_map_from_raw_pointcloud", 1, true);
+  // ros::Publisher gridMapPub;
+  // gridMapPub = nh.advertise<grid_map_msgs::GridMap>("grid_map_from_raw_pointcloud", 1, true);
 
-  grid_map::GridMapPclLoader gridMapPclLoader;
-  const std::string pathToCloud = gm::getPcdFilePath(nh);
-  gridMapPclLoader.loadParameters(gm::getParameterPath());
-  gridMapPclLoader.loadCloudFromPcdFile(pathToCloud);
+  grid_map::GridMapPclLoader gridMapPclLoader(&nh);
+  // const std::string pathToCloud = gm::getPcdFilePath(nh);
+  // gridMapPclLoader.loadParameters(gm::getParameterPath());
+  // gridMapPclLoader.loadCloudFromPcdFile(pathToCloud);
 
-  gm::processPointcloud(&gridMapPclLoader, nh);
+  // gm::processPointcloud(&gridMapPclLoader, nh);
 
-  grid_map::GridMap gridMap = gridMapPclLoader.getGridMap();
-  gridMap.setFrameId(gm::getMapFrame(nh));
+  // grid_map::GridMap gridMap = gridMapPclLoader.getGridMap();
+  // gridMap.setFrameId(gm::getMapFrame(nh));
 
-  gm::saveGridMap(gridMap, nh, gm::getMapRosbagTopic(nh));
+  // gm::saveGridMap(gridMap, nh, gm::getMapRosbagTopic(nh));
 
-  // publish grid map
+  // // publish grid map
 
-  grid_map_msgs::GridMap msg;
-  grid_map::GridMapRosConverter::toMessage(gridMap, msg);
-  gridMapPub.publish(msg);
+  // grid_map_msgs::GridMap msg;
+  // grid_map::GridMapRosConverter::toMessage(gridMap, msg);
+  // gridMapPub.publish(msg);
 
   // run
   ros::spin();

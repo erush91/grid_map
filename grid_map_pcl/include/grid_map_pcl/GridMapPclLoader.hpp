@@ -39,9 +39,13 @@ class GridMapPclLoader {
   using Point = ::pcl::PointXYZ;
   using Pointcloud = ::pcl::PointCloud<Point>;
 
-  GridMapPclLoader() = default;
+  GridMapPclLoader(ros::NodeHandle*);
   ~GridMapPclLoader() = default;
 
+  ros::Subscriber cloudSub_;
+  ros::Publisher gridMapPub_;
+
+  void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
   /*!
    * Loads the point cloud into memory
    * @param[in] fullpath to the point cloud.
