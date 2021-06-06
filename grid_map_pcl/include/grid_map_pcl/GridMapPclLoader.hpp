@@ -44,6 +44,7 @@ class GridMapPclLoader {
 
   ros::Subscriber cloudSub_;
   ros::Publisher gridMapPub_;
+  ros::Publisher filteredGridMapPub_;
 
   void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
   /*!
@@ -200,6 +201,10 @@ class GridMapPclLoader {
 
   // Class that handles point cloud processing
   grid_map_pcl::PointcloudProcessor pointcloudProcessor_;
+
+ private:
+  //! Filter chain parameters name.
+  std::string filterChainParametersName_;
 };
 
 }  // namespace grid_map

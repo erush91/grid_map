@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
   // gridMapPub = nh.advertise<grid_map_msgs::GridMap>("grid_map_from_raw_pointcloud", 1, true);
 
   grid_map::GridMapPclLoader gridMapPclLoader(&nh);
+  
   // const std::string pathToCloud = gm::getPcdFilePath(nh);
   // gridMapPclLoader.loadParameters(gm::getParameterPath());
   // gridMapPclLoader.loadCloudFromPcdFile(pathToCloud);

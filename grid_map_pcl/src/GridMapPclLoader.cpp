@@ -31,6 +31,13 @@
 #include <pcl/conversions.h>
 #include <pcl_ros/transforms.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wformat"
+#include <filters/filter_chain.h>
+#pragma GCC diagnostic pop
+#include <ros/ros.h>
+#include <string>
 namespace grid_map {
 
 GridMapPclLoader::GridMapPclLoader(ros::NodeHandle* nh)
@@ -40,6 +47,8 @@ GridMapPclLoader::GridMapPclLoader(ros::NodeHandle* nh)
 
   cloudSub_ = nh->subscribe<sensor_msgs::PointCloud2>("/H01/horiz/os_cloud_node/points", 1, &GridMapPclLoader::cloud_cb, this);
   gridMapPub_ = nh_->advertise<grid_map_msgs::GridMap>("grid_map_from_raw_pointcloud", 1, true);
+  filteredGridMapPub_ = nh_->advertise<grid_map_msgs::GridMap>("filtered_grid_map_from_raw_pointcloud", 1, true);
+  nh_->param("filter_chain_parameter_name", filterChainParametersName_, std::string("grid_map_filters"));
 
 }
 
@@ -51,8 +60,11 @@ void GridMapPclLoader::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_ms
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
 
+
+  loadParameters(grid_map::grid_map_pcl::getParameterPath());
   setInputCloud(temp_cloud);
   // const auto start = std::chrono::high_resolution_clock::now();
+  preProcessInputCloud();
   initializeGridMapGeometryFromInputCloud();
   // printTimeElapsedToRosInfoStream(start, "Initialization took: ");
   addLayerFromInputCloud("elevation");
@@ -64,6 +76,29 @@ void GridMapPclLoader::cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_ms
   grid_map_msgs::GridMap msg;
   grid_map::GridMapRosConverter::toMessage(gridMap, msg);
   gridMapPub_.publish(msg);
+
+  //! Filter chain.
+  filters::FilterChain<grid_map::GridMap> filterChain_("grid_map::GridMap");
+
+  // Setup filter chain.
+  if (!filterChain_.configure(filterChainParametersName_)) {
+    ROS_ERROR("Could not configure the filter chain!");
+    return;
+  }
+
+  // Apply filter chain.
+  grid_map::GridMap outputMap;
+  if (!filterChain_.update(gridMap, outputMap)) {
+    ROS_ERROR("Could not update the grid map filter chain!");
+    return;
+  }
+
+  ROS_INFO("PUBLISH");
+  // Publish filtered output grid map.
+  grid_map_msgs::GridMap outputMessage;
+  GridMapRosConverter::toMessage(outputMap, outputMessage);
+  filteredGridMapPub_.publish(outputMessage);
+  
 }
 
 const grid_map::GridMap& GridMapPclLoader::getGridMap() const {
@@ -117,6 +152,7 @@ void GridMapPclLoader::preProcessInputCloud() {
 void GridMapPclLoader::initializeGridMapGeometryFromInputCloud() {
   workingGridMap_.clearAll();
   const double resolution = params_.get().gridMap_.resolution_;
+  std::cout << resolution << std::endl;
   if (resolution < 1e-4) {
     throw std::runtime_error("Desired grid map resolution is zero");
   }
